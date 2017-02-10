@@ -888,12 +888,13 @@ class DateTime(Field):
         'format': '"{input}" cannot be formatted as a datetime.',
     }
 
-    def __init__(self, format=None, **kwargs):
+    def __init__(self, format=None, utc_naive=False, **kwargs):
         super(DateTime, self).__init__(**kwargs)
         # Allow this to be None. It may be set later in the ``_serialize``
         # or ``_desrialize`` methods This allows a Schema to dynamically set the
         # dateformat, e.g. from a Meta option
         self.dateformat = format
+        self.utc_naive = utc_naive
 
     def _add_to_schema(self, field_name, schema):
         super(DateTime, self)._add_to_schema(field_name, schema)
@@ -919,7 +920,7 @@ class DateTime(Field):
         func = self.DATEFORMAT_DESERIALIZATION_FUNCS.get(self.dateformat)
         if func:
             try:
-                return func(value)
+                return func(value, utc_naive=self.utc_naive)
             except (TypeError, AttributeError, ValueError):
                 raise self.fail('invalid')
         elif self.dateformat:

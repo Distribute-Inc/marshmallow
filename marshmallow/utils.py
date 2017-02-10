@@ -233,7 +233,20 @@ def from_datestring(datestring):
     else:
         raise RuntimeError('from_datestring requires the python-dateutil library')
 
-def from_rfc(datestring, use_dateutil=True):
+
+def to_utc_naive_datetime(datetime_with_tz):
+    utcoffset = datetime_with_tz.utcoffset()
+
+    if utcoffset:
+        datetime_without_tz = datetime_with_tz - utcoffset
+        datetime_without_tz = datetime_without_tz.replace(tzinfo=None)
+    else:
+        datetime_without_tz = datetime_with_tz  # didn't actually have a tz offset
+
+    return datetime_without_tz
+
+
+def from_rfc(datestring, use_dateutil=True, utc_naive=False):
     """Parse a RFC822-formatted datetime string and return a datetime object.
 
     Use dateutil's parser if possible.
@@ -246,17 +259,28 @@ def from_rfc(datestring, use_dateutil=True):
     else:
         parsed = parsedate(datestring)  # as a tuple
         timestamp = time.mktime(parsed)
-        return datetime.datetime.fromtimestamp(timestamp)
+        datetime_with_tz = datetime.datetime.fromtimestamp(timestamp)
+
+        if not utc_naive:
+            return datetime_with_tz
+        else:
+            return to_utc_naive_datetime(datetime_with_tz)
 
 
-def from_iso(datestring, use_dateutil=True):
+def from_iso(datestring, use_dateutil=True, utc_naive=False):
     """Parse an ISO8601-formatted datetime string and return a datetime object.
 
     Use dateutil's parser if possible and return a timezone-aware datetime.
     """
     # Use dateutil's parser if possible
     if dateutil_available and use_dateutil:
-        return parser.parse(datestring)
+        datetime_with_tz = parser.parse(datestring)
+
+        if not utc_naive:
+            return datetime_with_tz
+        else:
+            return to_utc_naive_datetime(datetime_with_tz)
+
     else:
         # Strip off timezone info.
         return datetime.datetime.strptime(datestring[:19], '%Y-%m-%dT%H:%M:%S')
